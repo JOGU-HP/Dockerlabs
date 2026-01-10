@@ -1,0 +1,74 @@
+Resolucion de la maquina candy DockerLabs
+
+Se realiza un escaneo de puertos con nmap
+nmap -p- -sS -sC -sV --min-rate 1000 -Pn 172.17.0.2
+
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-09 22:41 -0600
+Nmap scan report for 172.17.0.2
+Host is up (0.0000030s latency).
+Not shown: 65534 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
+|_http-server-header: Apache/2.4.58 (Ubuntu)
+| http-robots.txt: 17 disallowed entries (15 shown)
+| /joomla/administrator/ /administrator/ /api/ /bin/ 
+| /cache/ /cli/ /components/ /includes/ /installation/ 
+|_/language/ /layouts/ /un_caramelo /libraries/ /logs/ /modules/
+|_http-title: Home
+|_http-generator: Joomla! - Open Source Content Management
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 10.21 seconds
+
+Al realizar un primer escaneo visual, se detecta el puerto 80 lo que sugiere que se trata de una pagina web por lo que se accede al navegador y a la URL con la direccion IP dada 
+Se realiza una inspeccion visual, viendo campos de Login y Password
+Al intentar realizar un index.php=../../../../etc/ no se ha obtenido ningun indicio de que exista alguna shell que se pueda usar
+
+Se opta por hacer gobuster a la pagina y encontrar otros directorios ocultos
+Y en efecto se encuentran varios directorios y uno de ellos interesante es en administrator, pero se ha encontrado un archivo llamado robots.txt por lo que se accedera a este primero
+Se accede y encuentra la siguiente inormacion
+
+# If the Joomla site is installed within a folder
+# eg www.example.com/joomla/ then the robots.txt file
+# MUST be moved to the site root
+# eg www.example.com/robots.txt
+# AND the joomla folder name MUST be prefixed to all of the
+# paths.
+# eg the Disallow rule for the /administrator/ folder MUST
+# be changed to read
+# Disallow: /joomla/administrator/
+#
+# For more information about the robots.txt standard, see:
+# https://www.robotstxt.org/orig.html
+
+User-agent: *
+Disallow: /administrator/
+Disallow: /api/
+Disallow: /bin/
+Disallow: /cache/
+Disallow: /cli/
+Disallow: /components/
+Disallow: /includes/
+Disallow: /installation/
+Disallow: /language/
+Disallow: /layouts/
+Disallow: /un_caramelo
+Disallow: /libraries/
+Disallow: /logs/
+Disallow: /modules/
+Disallow: /plugins/
+Disallow: /tmp/
+
+
+admin:c2FubHVpczEyMzQ1
+
+Parace que la informacion esta cifrada por lo que se usara CiberChef para poder desencriptar lo que es o el usuario o la contrasena
+Despues de probar las posibles combinaciones y usar base64 se desencripta el texto
+
+sanluis12345
+
+Se ingresa de nuevo al panel administrator y se prueba el texto desencriptado, que tiene logica de ser contrasena
+Se accede exitosamente en la pagina como administrador 
+Despues de navegar por la pagina, al ver la informacion del sitio veo que hay un joomla en la v4.1.2 que investigando se puede eviar una reverseshell editando el archivo index.txt con una reverseshell en la misma pagina
+Al ejecutar cat /etc/passwd encuentro usuarios y entre ellos esta luisillo
