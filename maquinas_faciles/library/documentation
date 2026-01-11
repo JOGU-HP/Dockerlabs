@@ -1,7 +1,7 @@
 Resolucion de la maquina library
 
 Despues de levantar la maquina con Docker, se realiza un escaneo con nmap
-https://github.com/JOGU-HP/Dockerlabs/blob/1313bacfd784142df57e146e9e3f6267fe19d3b5/maquinas_faciles/library/images/escaneo.png
+![image alt](https://github.com/JOGU-HP/Dockerlabs/blob/1313bacfd784142df57e146e9e3f6267fe19d3b5/maquinas_faciles/library/images/escaneo.png)
 
 Al ver el puerto 22 y 80 que pertenecen a ssh y http, intuyo que es una pagina web lo que se esta atacando, por lo que busco en el navegador
 <img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/2a098c36-0ee7-45ea-b608-9e86b1e729cf" />
