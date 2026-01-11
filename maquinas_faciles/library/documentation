@@ -1,0 +1,45 @@
+Resolucion de la maquina library
+
+Despues de levantar la maquina con Docker, se realiza un escaneo con nmap
+<img width="762" height="295" alt="Image" src="https://github.com/user-attachments/assets/73f3625e-e5af-4308-8060-c7df0a49a45c" />
+
+Al ver el puerto 22 y 80 que pertenecen a ssh y http, intuyo que es una pagina web lo que se esta atacando, por lo que busco en el navegador
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/2a098c36-0ee7-45ea-b608-9e86b1e729cf" />
+
+No noto nada extrano en la pagina, por lo que proceso a hacer Fuzzing con gobuster para encontrar directorios ocultos
+<img width="768" height="427" alt="Image" src="https://github.com/user-attachments/assets/575ab6f1-ce5f-4fdd-98c1-439a08d5b913" />
+
+Encuentro un archivo .php, por lo que acceso en el link con la terminacion /index.php y me encuentro con lo que parece ser una credencial
+<img width="1044" height="268" alt="Image" src="https://github.com/user-attachments/assets/2746e7c0-fcbb-4c57-8b72-3f2727a4b4aa" />
+
+La credencial parece ser una contrasena, asi que intento hacer un ataque con hydra, pero como tengo la contrasena, utilizare hydra para enconrar al usuario utilizando el diccionario
+xato-net-10-million-usernames-dup.txt
+<img width="1016" height="157" alt="Image" src="https://github.com/user-attachments/assets/f0d6a03d-ed22-44f9-9343-4470ca739a82" />
+
+Encuentro al usuario carlos y al ya tener la contrasena, solo realizo una conexion por ssh
+<img width="661" height="298" alt="Image" src="https://github.com/user-attachments/assets/89fb721b-7edd-4123-8471-0a1de37b792b" />
+
+Realizo un sudo -l para ver que binarios existen y ejecutar alguno para convertirme en root y se encuentra un script.py que puede ejecutarse para ser root
+<img width="1019" height="124" alt="Image" src="https://github.com/user-attachments/assets/dee7d127-2fc8-4f4c-80b6-d8cd1c61e906" />
+
+Con la ayuda de cat se puede ver el script, encontrando la libreria shutil
+  > carlos@786c84f45512:~$ cat /opt/script.py
+--------------------------------------------
+import shutil
+
+def copiar_archivo(origen, destino):
+    shutil.copy(origen, destino)
+    print(f'Archivo copiado de {origen} a {destino}')
+
+if __name__ == '__main__':
+    origen = '/opt/script.py'
+    destino = '/tmp/script_backup.py'
+
+Con ello, podemos usar Python Library Hijacking para forzar a python a que ejecute este archivo para convertirnos en root creando un nano e importando la libreria
+<img width="457" height="99" alt="Image" src="https://github.com/user-attachments/assets/2bf3119b-0290-4d57-ae93-b192f4f494d6" />
+
+Una vez que se ejcute el codigo nos convertimos en root
+<img width="502" height="104" alt="Image" src="https://github.com/user-attachments/assets/ef55545f-02a7-4f93-9b11-dfb430ec646a" />
+
+Al final si escribimos whoami, veremos que somos root 
+<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/7f29ed1c-1e87-4f6d-aeb2-f26d6a76467a" />
