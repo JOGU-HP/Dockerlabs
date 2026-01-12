@@ -11,3 +11,28 @@ PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
 3 packets transmitted, 3 received, 0% packet loss, time 2045ms
 rtt min/avg/max/mdev = 0.076/0.082/0.086/0.004 ms
 
+Realizando escaneo de puertos
+└─$ nmap -p- -sS -sC -sV --min-rate 1000 172.17.0.2             
+Starting Nmap 7.98 ( https://nmap.org ) at 2026-01-11 23:07 -0600
+Nmap scan report for 172.17.0.2
+Host is up (0.0000040s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 7e:72:b6:8b:5f:7c:23:64:dc:15:21:32:5f:ce:40:0a (ECDSA)
+|_  256 05:8a:a7:27:0f:88:b9:70:84:ec:6d:33:dc:ce:09:6f (ED25519)
+80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
+|_http-server-header: Apache/2.4.58 (Ubuntu)
+|_http-title: SecurSEC S.L
+MAC Address: 02:42:AC:11:00:02 (Unknown)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 7.63 seconds
+
+Observo que existe una pagina web
+Se encuentra informacion en la pagina web y 2 posibles usuarios
+Carlota y Juan
+
+Al realizar un ataque con hydra se en
