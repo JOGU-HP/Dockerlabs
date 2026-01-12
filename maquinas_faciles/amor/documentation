@@ -1,1 +1,13 @@
 Vulnerando la maquina amor Facil
+
+Ping a la maquina comprobar conexion
+└─$ ping -c3 172.17.0.2                                                              
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.076 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.086 ms
+64 bytes from 172.17.0.2: icmp_seq=3 ttl=64 time=0.085 ms
+
+--- 172.17.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2045ms
+rtt min/avg/max/mdev = 0.076/0.082/0.086/0.004 ms
+
